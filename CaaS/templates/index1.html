@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head lang="en">
+        <meta charset="UTF-8">
+        <script language="JavaScript">
+            function askForAns() {
+
+                var para = document.getElementById("para_input").value
+                var ques = document.getElementById("ques_input").value
+
+                var xhr = new XMLHttpRequest();
+
+                var url = "http://{{server_ip}}:5000/api/";
+                xhr.open("POST", url, true);
+                xhr.setRequestHeader("Content-Type", "application/json");
+                xhr.onreadystatechange = function () {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        var json = JSON.parse(xhr.responseText);
+                        console.log(json.answer);
+                        document.getElementById('display').innerHTML = json.answer;
+                    }
+                };
+                var data = JSON.stringify({"paragraph": para, "question": ques});
+                xhr.send(data);
+                console.log(ques);
+            }
+        </script>
+    </head>
+    <body>
+        <form onsubmit="askForAns(); return false;">
+            <p>Paragraph:</p>
+            <textarea name="textarea" id="para_input" style="width:250px;height:150px;"></textarea>
+            <br>
+            <p>Question</p>
+            <input type="text" name="ques" id="ques_input" style="width:350px;height:15px;">
+
+            <input type="submit">
+        </form>
+        
+        <br/>
+        <label>Answer found: </label>
+        <p><span id='display'></span></p>
+    </body>
+</html>
+</body>
+</html>
