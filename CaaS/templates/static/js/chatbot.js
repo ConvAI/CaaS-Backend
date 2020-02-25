@@ -17,10 +17,9 @@ $(function() {
         value: 'new'
       }
     ];
-    let para = "TTT";
+    let para = document.getElementById("paragraph").value;
     const xhr = new XMLHttpRequest();
-    var data = document.getElementById('chatbotscript').getAttribute('data');
-    xhr.open("POST", data, true);
+    xhr.open("POST", "http://localhost:5000/api/", true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
@@ -36,7 +35,7 @@ $(function() {
     var str="";
     str += "<div id='cm-msg-"+INDEX+"' class=\"chat-msg "+type+"\">";
     str += "          <div class=\"cm-msg-text\">";
-    str += msg[0].toUpperCase() + msg.slice(1);
+    str += msg;
     str += "          <\/div>";
     str += "        <\/div>";
     $(".chat-logs").append(str);
