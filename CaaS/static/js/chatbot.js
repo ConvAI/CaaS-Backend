@@ -17,10 +17,9 @@ $(function() {
         value: 'new'
       }
     ];
-    let para = "TTT";
     const xhr = new XMLHttpRequest();
-    var data = document.getElementById('chatbotscript').getAttribute('data');
-    xhr.open("POST", data, true);
+    const id = document.getElementById('chatbotscript').getAttribute('chatbot-id');
+    xhr.open("POST", id, true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
@@ -28,7 +27,7 @@ $(function() {
             generate_message(json.answer, 'user');
         }
     };
-    xhr.send(JSON.stringify({"paragraph": para, "question": msg}));
+    xhr.send(JSON.stringify({"question": msg}));
   });
 
   function generate_message(msg, type) {
@@ -36,7 +35,7 @@ $(function() {
     var str="";
     str += "<div id='cm-msg-"+INDEX+"' class=\"chat-msg "+type+"\">";
     str += "          <div class=\"cm-msg-text\">";
-    str += msg[0].toUpperCase() + msg.slice(1);
+    str += msg;
     str += "          <\/div>";
     str += "        <\/div>";
     $(".chat-logs").append(str);

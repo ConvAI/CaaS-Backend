@@ -19,7 +19,7 @@ $(function() {
     ];
     let para = document.getElementById("paragraph").value;
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://localhost:5000/api/", true);
+    xhr.open("POST", "http://localhost:3232/api/", true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {

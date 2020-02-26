@@ -68,9 +68,9 @@ Index Of Script
 		/*------------------------
 		Tooltip
 		--------------------------*/
-		$(function() {
-			$('[data-toggle="tooltip"]').tooltip()
-		})
+		// $(function() {
+		// 	$('[data-toggle="tooltip"]').tooltip()
+		// });
 
 
 

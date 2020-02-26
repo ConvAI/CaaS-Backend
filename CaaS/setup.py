@@ -2,11 +2,11 @@ from setuptools import setup
 
 setup(
     name='CaaS',
-    version='1.0',
+    version='1.2',
     packages=[''],
     url='',
     license='',
-    author='KSOFT',
+    author='Group10',
     author_email='',
-    description='a Customisable and Dynamic Chatbot'
+    description='A Customisable and Dynamic Chatbot'
 )
