@@ -10,24 +10,25 @@ function include(file) {
     
 } 
 
-include("http://localhost:3232/static/js/jquery-3.3.1.min.js");
-include("http://localhost:3232/static/js/bootstrap.min.js");
-include("http://localhost:3232/static/js/popper.min.js");
-include("http://localhost:3232/static/js/owl.carousel.min.js");
-include("http://localhost:3232/static/js/wow.min.js");
-include("http://localhost:3232/static/js/app.min.js");
-include("http://localhost:3232/static/js/circle.js");
-include("http://localhost:3232/static/js/chatbot.js");
-include("http://localhost:3232/static/js/main.js");
-include("http://localhost:3232/static/js/custom.js");
 var url = document.getElementById('chatbotscript').getAttribute('src');
 var data = document.getElementById('chatbotscript').getAttribute('data');
+ipport = data.split('/')[2];
+include("http://"+ipport+"/static/js/jquery-3.3.1.min.js");
+include("http://"+ipport+"/static/js/bootstrap.min.js");
+include("http://"+ipport+"/static/js/popper.min.js");
+include("http://"+ipport+"/static/js/owl.carousel.min.js");
+include("http://"+ipport+"/static/js/wow.min.js");
+include("http://"+ipport+"/static/js/app.min.js");
+include("http://"+ipport+"/static/js/circle.js");
+include("http://"+ipport+"/static/js/chatbot.js");
+include("http://"+ipport+"/static/js/main.js");
+include("http://"+ipport+"/static/js/custom.js");
 console.log(url)
 console.log(data);
 var div = document.createElement('div');
 div.id = 'chatbot_nervai';
 const xhr = new XMLHttpRequest();
-xhr.open("GET", "http://localhost:3232/templatebot", true);
+xhr.open("GET", "http://"+ipport+"/templatebot", true);
 xhr.onreadystatechange = function () {
     if (xhr.readyState === 4 && xhr.status === 200) {
         

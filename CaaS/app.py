@@ -26,7 +26,9 @@ def home():
 @app.route('/templatebot')
 def templatebot():
     with open("./templates/index.html","r") as f:
-        return f.read()
+        doc = f.read()
+        bot_url = 'http://' + SERVER + ':' + PORT
+        return doc.replace('{{bot_url_}}',bot_url)
     return ""
 
 @app.route('/chat/<bot_id>',methods=['GET', 'POST'])
@@ -69,7 +71,9 @@ def chat(bot_id):
             j_ans.headers.add('Access-Control-Allow-Origin', '*')
             return j_ans
     if request.method == 'GET':
-        return send_file('./static/get.js',as_attachment=True,attachment_filename='get.js')
+        if data:
+            bot_url = 'http://' + SERVER + ':' + PORT
+            return render_template('bottest.html',bot_id=bot_id,bot_url=bot_url)
 
 
 		# if bot_id not in table:
@@ -121,10 +125,9 @@ def get_gpu_status(conndevice):
 if __name__ == '__main__':
     with app.app_context():
         cursor =mysql.connection.cursor()
-
-        cursor.execute("SELECT paragraph from userpanel_bot where id={}".format(int(6)))
+        cursor.execute("SELECT paragraph from userpanel_bot")
         data = cursor.fetchone()
-        print('data',data[0])
+        print('DB works:',data)
     print('Loading models...')
     tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased-distilled-squad')
     model = DistilBertForQuestionAnswering.from_pretrained('distilbert-base-uncased-distilled-squad')
@@ -138,4 +141,8 @@ if __name__ == '__main__':
     model.to(device)
     get_gpu_status(device)
 
-    app.run(host='0.0.0.0',port='3232',debug=True)
+    # TODO Change IP 
+    SERVER = 'localhost'
+    PORT = '8082'
+
+    app.run(host='0.0.0.0',port=PORT,debug=True)
