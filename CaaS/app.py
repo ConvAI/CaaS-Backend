@@ -66,19 +66,20 @@ def templatebot():
 @app.route('/chat/<bot_id>', methods=['GET', 'POST'])
 def chat(bot_id):
     db = mysql.connection.cursor()
-    db.execute("SELECT paragraph from userpanel_bot where id={}".format(bot_id))
+    db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(bot_id))
     para = db.fetchone()
     print(para)
 
-    if request.method == 'POST':
-        if para:
-            response = request.get_json()
-            ans = Replier(para[0], response['question'])
-            j_ans = jsonify({'answer': ans})
-            j_ans.headers.add('Access-Control-Allow-Origin', '*')
-            return j_ans
+    if request.method == 'POST' and para and para[1]:
+        response = request.get_json()
+        ans = Replier(para[0], response['question'])
+        j_ans = jsonify({'answer': ans})
+        j_ans.headers.add('Access-Control-Allow-Origin', '*')
+        return j_ans
     # elif request.method == 'GET':
     #     return send_file('./static/get.js', as_attachment=True, attachment_filename='get.js')
+    elif para and not para[1]:
+        return "Bot not deployed"
 
 
 @app.route('/api/', methods=['POST'])
