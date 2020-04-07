@@ -64,3 +64,16 @@ includeScript("{{loadurl}}/static/js/circle.js");
 includeScript("{{loadurl}}/static/js/chatbot.js");
 includeScript("{{loadurl}}/static/js/main.js");
 includeScript("{{loadurl}}/static/js/custom.js");
+
+// 
+// ** TODO ** 
+// Load Greeting Message for custom
+// else assign default ones
+// **********
+
+// calling functions inside chatbot.js
+var greeted;
+$(document).ready(function() {
+    console.log( "ready!" );
+    greeted = false;
+});

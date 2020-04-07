@@ -91,6 +91,12 @@ $(function() {
   });
   
   $("#chat-circle").click(function() {    
+    if(!greeted){
+      // show greeting message
+      setTimeout(() => generate_message('Hey there!','user'), 1500);
+      setTimeout(() => generate_message('Welcome, Feel free to ask me any question.😁','user'), 3000);
+      greeted = true;
+    }
     $("#chat-circle").toggle('scale');
     $(".chat-box").toggle('scale');
   });

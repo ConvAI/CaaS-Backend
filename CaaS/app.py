@@ -123,4 +123,4 @@ if __name__ == '__main__':
     get_gpu_status(device)
 
     print('[=>] Service Running on http://{}:{}'.format(serverhost, serverport))
-    app.run(host=serverhost, port=serverport)
+    app.run(host=serverhost, port=serverport,debug=True)
