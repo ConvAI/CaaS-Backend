@@ -65,21 +65,29 @@ def templatebot():
 
 @app.route('/chat/<bot_id>', methods=['GET', 'POST'])
 def chat(bot_id):
-    db = mysql.connection.cursor()
-    db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(bot_id))
-    para = db.fetchone()
-    print(para)
 
-    if request.method == 'POST' and para and para[1]:
-        response = request.get_json()
-        ans = Replier(para[0], response['question'])
-        j_ans = jsonify({'answer': ans})
-        j_ans.headers.add('Access-Control-Allow-Origin', '*')
-        return j_ans
-    # elif request.method == 'GET':
-    #     return send_file('./static/get.js', as_attachment=True, attachment_filename='get.js')
-    elif para and not para[1]:
-        return "Bot not deployed"
+    if request.method == 'POST' and request.get_json()['question']:
+        db = mysql.connection.cursor()
+        db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(bot_id))
+        para = db.fetchone()
+        print(para)
+
+        if para and para[1]:
+            response = request.get_json()
+            ans = Replier(para[0], response['question'])
+            j_ans = jsonify({'answer': ans})
+            j_ans.headers.add('Access-Control-Allow-Origin', '*')
+            return j_ans
+        # elif request.method == 'GET':
+        #     return send_file('./static/get.js', as_attachment=True, attachment_filename='get.js')
+        elif para and not para[1]:
+            j_ans = jsonify({'answer': "Bot is under maintenance"})
+            j_ans.headers.add('Access-Control-Allow-Origin', '*')
+            return j_ans
+        else:
+            j_ans = jsonify({'answer': "Bot does not exist"})
+            j_ans.headers.add('Access-Control-Allow-Origin', '*')
+            return j_ans
 
 
 @app.route('/api/', methods=['POST'])
