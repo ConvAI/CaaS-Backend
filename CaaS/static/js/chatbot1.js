@@ -1,5 +1,9 @@
 $(function() {
-  var INDEX = 0; 
+  const socket = io("http://localhost:8082");
+  socket.on('connect', () => {});
+  socket.on('disconnect', () => {socket.open();});
+
+  let INDEX = 0;
   $("#chat-submit").click(function(e) {
     e.preventDefault();
     const msg = $("#chat-input").val();
@@ -7,27 +11,10 @@ $(function() {
       return false;
     }
     generate_message(msg, 'self');
-    const buttons = [
-      {
-        name: 'Existing User',
-        value: 'existing'
-      },
-      {
-        name: 'New User',
-        value: 'new'
-      }
-    ];
     let para = document.getElementById("paragraph").value;
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", "http://localhost:3232/api/", true);
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            const json = JSON.parse(xhr.responseText);
-            generate_message(json.answer, 'user');
-        }
-    };
-    xhr.send(JSON.stringify({"paragraph": para, "question": msg}));
+    socket.emit("oldhomebot", {"Paragraph": para, "Question": msg}, (data) => {
+          generate_message(data.answer, 'user');
+    });
   });
 
   function generate_message(msg, type) {

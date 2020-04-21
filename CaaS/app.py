@@ -4,10 +4,10 @@ import torch
 from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
 from flaskext.mysql import MySQL
-from flask_socketio import SocketIO
+from flask_socketio import SocketIO, emit
 from transformers import *
 
-# SERVER SETUP
+################## SERVER SETUP ######################
 
 app = Flask(__name__)
 app.config['MYSQL_DATABASE_HOST'] = 'localhost'
@@ -25,7 +25,8 @@ mysql = MySQL(app)
 db = mysql.connect().cursor()
 socketio = SocketIO(app)
 
-# CHATBOT
+
+################## CHATBOT ######################
 
 def Replier(para, ques):
     st = time.time()
@@ -49,77 +50,77 @@ def Replier(para, ques):
     print('[=>] Answer: ', ans, " Time:", time_taken)
     return ans
 
-# Sockets
+################## Sockets ######################
+
+@socketio.on('chatbot')
+def chatbot(req):
+    db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(req["BotId"]))
+    para = db.fetchone()
+    if para and (para[1] or req['Previewbot'] is 1):
+        ans = Replier(para[0], req['Question'])
+        return {'answer': ans}
+    elif para and not para[1]:
+        return {'answer': "Bot is under maintenance"}
+    else:
+        return {'answer': "Bot does not exist"}
 
 
+@socketio.on('oldhomebot')
+def oldhomebot(req):
+    ans = Replier(req['Paragraph'], req['Question'])
+    return {'answer': ans}
 
-# APIS
+################## APIS ######################
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-
 @app.route('/old')
 def oldhome():
     return render_template('index-old.html')
-
-
-# @app.route('/templatebot')
-# def templatebot():
-#     return render_template('index-template.html', loadurl='http://{}:{}'.format(serverhost, serverport))
-
 
 @app.route('/templatebot')
 def templatebot():
     return render_template('get.js', loadurl='http://{}:{}'.format(serverhost, serverport))
 
-
 @app.route('/previewbot/<bot_id>', methods=['GET'])
 def previewbot(bot_id):
     return render_template('preview.html', loadurl='http://{}:{}'.format(serverhost, serverport), botid=bot_id)
 
+################# Old Chatbot Api ###################
+#
+# @app.route('/chat/<bot_id>', methods=['POST'])
+# def chat(bot_id):
+#     if request.get_json()['question']:
+#         db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(bot_id))
+#         para = db.fetchone()
+#
+#         if para and (para[1] or request.get_json()['previewbot'] is 1):
+#             response = request.get_json()
+#             ans = Replier(para[0], response['question'])
+#             if '[SEP]' in ans:
+#                 j_ans = jsonify({'answer': ans})
+#             else:
+#                 j_ans = jsonify({'answer': ans})
+#             j_ans.headers.add('Access-Control-Allow-Origin', '*')
+#             return j_ans
+#         elif para and not para[1]:
+#             j_ans = jsonify({'answer': "Bot is under maintenance"})
+#             j_ans.headers.add('Access-Control-Allow-Origin', '*')
+#             return j_ans
+#         else:
+#             j_ans = jsonify({'answer': "Bot does not exist"})
+#             j_ans.headers.add('Access-Control-Allow-Origin', '*')
+#             return j_ans
+#
+# @app.route('/api/', methods=['POST'])
+# def answerapi():
+#     req = request.get_json()
+#     ans = Replier(req['paragraph'], req['question'])
+#     return jsonify({'answer': ans})
 
-@app.route('/chat/<bot_id>', methods=['POST'])
-def chat(bot_id):
-    if request.get_json()['question']:
-        db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(bot_id))
-        para = db.fetchone()
-
-        if para and (para[1] or request.get_json()['previewbot'] is 1):
-            response = request.get_json()
-            ans = Replier(para[0], response['question'])
-            if '[SEP]' in ans:
-                j_ans = jsonify({'answer': ans})
-            else:
-                j_ans = jsonify({'answer': ans})
-            j_ans.headers.add('Access-Control-Allow-Origin', '*')
-            return j_ans
-        elif para and not para[1]:
-            j_ans = jsonify({'answer': "Bot is under maintenance"})
-            j_ans.headers.add('Access-Control-Allow-Origin', '*')
-            return j_ans
-        else:
-            j_ans = jsonify({'answer': "Bot does not exist"})
-            j_ans.headers.add('Access-Control-Allow-Origin', '*')
-            return j_ans
-
-
-@app.route('/api/', methods=['POST'])
-def answerapi():
-    req = request.get_json()
-    ans = Replier(req['paragraph'], req['question'])
-    return jsonify({'answer': ans})
-
-# SERVER RUN
-
-def get_gpu_status(gpudevice):
-    if gpudevice.type == 'cuda':
-        print(torch.cuda.get_device_name(0))
-        print('[=>] Memory Usage:')
-        print('[=>] Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
-        print('[=>] Cached:   ', round(torch.cuda.memory_cached(0) / 1024 ** 3, 1), 'GB')
-
+################## SERVER RUN ######################
 
 if __name__ == '__main__':
     print('[=>] CaaS Chatbot Server Starting')
@@ -144,7 +145,11 @@ if __name__ == '__main__':
     print('[=>] Currently Using Device:', device)
 
     model.to(device)
-    get_gpu_status(device)
+    if device.type == 'cuda':
+        print(torch.cuda.get_device_name(0))
+        print('[=>] Memory Usage:')
+        print('[=>] Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
+        print('[=>] Cached:   ', round(torch.cuda.memory_cached(0) / 1024 ** 3, 1), 'GB')
 
     print('[=>] Service Running on http://{}:{}'.format(serverhost, serverport))
     socketio.run(app, host=serverhost, port=serverport, debug=False)

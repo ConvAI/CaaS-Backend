@@ -2,6 +2,8 @@ $(function() {
   let INDEX = 0;
   const URL = document.getElementById('chatbotscript').getAttribute('src').replace("/templatebot", "");
   const socket = io(URL);
+  socket.on('connect', () => {});
+  socket.on('disconnect', () => {socket.open();});
 
   $("#chat-submit").click(function(e) {
     e.preventDefault();
@@ -10,20 +12,16 @@ $(function() {
       return false;
     }
     generate_message(msg, 'self');
-    const xhr = new XMLHttpRequest();
     const id = document.getElementById('chatbotscript').getAttribute('chatbot-id');
-    xhr.open("POST", URL + "/chat/" + id, true);
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.onreadystatechange = function () {
-        if (xhr.readyState === 4 && xhr.status === 200) {
-            const res = JSON.parse(xhr.responseText);
-            generate_message(res.answer, 'user');
-        }
-    };
+    let eventName = "chatbot";
     if(document.getElementById('chatbotscript').hasAttribute('previewbot')){
-      xhr.send(JSON.stringify({"question": msg, "previewbot": 1}));
+      socket.emit(eventName, {"BotId": id, "Question": msg, "Previewbot": 1}, (data) => {
+          generate_message(data.answer, 'user');
+      });
     } else {
-      xhr.send(JSON.stringify({"question": msg}));
+      socket.emit(eventName, {"BotId": id, "Question": msg}, (data) => {
+          generate_message(data.answer, 'user');
+      });
     }
   });
 
@@ -90,8 +88,8 @@ $(function() {
   $("#chat-circle").click(function() {    
     if(!greeted){
       // show greeting message
-      setTimeout(() => generate_message('Hey there!','user'), 1500);
-      setTimeout(() => generate_message('Welcome, Feel free to ask me any question.😁','user'), 3000);
+      setTimeout(() => generate_message('Hey there!','user'), 1000);
+      setTimeout(() => generate_message('Welcome, Feel free to ask me any question.😁','user'), 2000);
       greeted = true;
     }
     $("#chat-circle").toggle('scale');
