@@ -1,5 +1,8 @@
 $(function() {
-  var INDEX = 0; 
+  let INDEX = 0;
+  const URL = document.getElementById('chatbotscript').getAttribute('src').replace("/templatebot", "");
+  const socket = io(URL);
+
   $("#chat-submit").click(function(e) {
     e.preventDefault();
     const msg = $("#chat-input").val();
@@ -7,27 +10,21 @@ $(function() {
       return false;
     }
     generate_message(msg, 'self');
-    const buttons = [
-      {
-        name: 'Existing User',
-        value: 'existing'
-      },
-      {
-        name: 'New User',
-        value: 'new'
-      }
-    ];
     const xhr = new XMLHttpRequest();
     const id = document.getElementById('chatbotscript').getAttribute('chatbot-id');
-    xhr.open("POST", id, true);
+    xhr.open("POST", URL + "/chat/" + id, true);
     xhr.setRequestHeader("Content-Type", "application/json");
     xhr.onreadystatechange = function () {
         if (xhr.readyState === 4 && xhr.status === 200) {
-            const json = JSON.parse(xhr.responseText);
-            generate_message(json.answer, 'user');
+            const res = JSON.parse(xhr.responseText);
+            generate_message(res.answer, 'user');
         }
     };
-    xhr.send(JSON.stringify({"question": msg}));
+    if(document.getElementById('chatbotscript').hasAttribute('previewbot')){
+      xhr.send(JSON.stringify({"question": msg, "previewbot": 1}));
+    } else {
+      xhr.send(JSON.stringify({"question": msg}));
+    }
   });
 
   function generate_message(msg, type) {

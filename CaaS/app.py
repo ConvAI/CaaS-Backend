@@ -1,24 +1,31 @@
 import time
 
 import torch
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify
 from flask_cors import CORS
-from flask_mysqldb import MySQL
+from flaskext.mysql import MySQL
+from flask_socketio import SocketIO
 from transformers import *
 
+# SERVER SETUP
+
 app = Flask(__name__)
-app.config['MYSQL_USER'] = 'root'
-app.config['MYSQL_PASSWORD'] = ''
-app.config['MYSQL_DB'] = 'nervaidb'
-app.config['MYSQL_HOST'] = 'localhost'
-app.config['MYSQL_PORT'] = 3306
+app.config['MYSQL_DATABASE_HOST'] = 'localhost'
+app.config['MYSQL_DATABASE_PORT'] = 3306
+app.config['MYSQL_DATABASE_USER'] = 'root'
+app.config['MYSQL_DATABASE_PASSWORD'] = ''
+app.config['MYSQL_DATABASE_DB'] = 'nervaidb'
+app.config['SECRET_KEY'] = 'secret!'
 
 serverhost = '127.0.0.1'
-serverport = 3232
+serverport = 8082
 
 CORS(app)
 mysql = MySQL(app)
+db = mysql.connect().cursor()
+socketio = SocketIO(app)
 
+# CHATBOT
 
 def Replier(para, ques):
     st = time.time()
@@ -42,6 +49,11 @@ def Replier(para, ques):
     print('[=>] Answer: ', ans, " Time:", time_taken)
     return ans
 
+# Sockets
+
+
+
+# APIS
 
 @app.route('/')
 def home():
@@ -63,23 +75,26 @@ def templatebot():
     return render_template('get.js', loadurl='http://{}:{}'.format(serverhost, serverport))
 
 
-@app.route('/chat/<bot_id>', methods=['GET', 'POST'])
-def chat(bot_id):
+@app.route('/previewbot/<bot_id>', methods=['GET'])
+def previewbot(bot_id):
+    return render_template('preview.html', loadurl='http://{}:{}'.format(serverhost, serverport), botid=bot_id)
 
-    if request.method == 'POST' and request.get_json()['question']:
-        db = mysql.connection.cursor()
+
+@app.route('/chat/<bot_id>', methods=['POST'])
+def chat(bot_id):
+    if request.get_json()['question']:
         db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(bot_id))
         para = db.fetchone()
-        print(para)
 
-        if para and para[1]:
+        if para and (para[1] or request.get_json()['previewbot'] is 1):
             response = request.get_json()
             ans = Replier(para[0], response['question'])
-            j_ans = jsonify({'answer': ans})
+            if '[SEP]' in ans:
+                j_ans = jsonify({'answer': ans})
+            else:
+                j_ans = jsonify({'answer': ans})
             j_ans.headers.add('Access-Control-Allow-Origin', '*')
             return j_ans
-        # elif request.method == 'GET':
-        #     return send_file('./static/get.js', as_attachment=True, attachment_filename='get.js')
         elif para and not para[1]:
             j_ans = jsonify({'answer': "Bot is under maintenance"})
             j_ans.headers.add('Access-Control-Allow-Origin', '*')
@@ -96,6 +111,7 @@ def answerapi():
     ans = Replier(req['paragraph'], req['question'])
     return jsonify({'answer': ans})
 
+# SERVER RUN
 
 def get_gpu_status(gpudevice):
     if gpudevice.type == 'cuda':
@@ -131,4 +147,4 @@ if __name__ == '__main__':
     get_gpu_status(device)
 
     print('[=>] Service Running on http://{}:{}'.format(serverhost, serverport))
-    app.run(host=serverhost, port=serverport,debug=True)
+    socketio.run(app, host=serverhost, port=serverport, debug=False)

@@ -61,6 +61,7 @@ includeScript("{{loadurl}}/static/js/owl.carousel.min.js");
 includeScript("{{loadurl}}/static/js/wow.min.js");
 includeScript("{{loadurl}}/static/js/app.min.js");
 includeScript("{{loadurl}}/static/js/circle.js");
+includeScript("{{loadurl}}/static/js/socket.io.js");
 includeScript("{{loadurl}}/static/js/chatbot.js");
 includeScript("{{loadurl}}/static/js/main.js");
 includeScript("{{loadurl}}/static/js/custom.js");
