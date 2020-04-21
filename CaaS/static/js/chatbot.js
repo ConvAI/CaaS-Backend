@@ -1,6 +1,8 @@
 $(function() {
   let INDEX = 0;
+  let isGreeted = false;
   const URL = document.getElementById('chatbotscript').getAttribute('src').replace("/templatebot", "");
+  const Botid = document.getElementById('chatbotscript').getAttribute('chatbot-id');
   const socket = io(URL);
   socket.on('connect', () => {});
   socket.on('disconnect', () => {socket.open();});
@@ -12,14 +14,13 @@ $(function() {
       return false;
     }
     generate_message(msg, 'self');
-    const id = document.getElementById('chatbotscript').getAttribute('chatbot-id');
     let eventName = "chatbot";
     if(document.getElementById('chatbotscript').hasAttribute('previewbot')){
-      socket.emit(eventName, {"BotId": id, "Question": msg, "Previewbot": 1}, (data) => {
+      socket.emit(eventName, {"BotId": Botid, "Question": msg, "Previewbot": 1}, (data) => {
           generate_message(data.answer, 'user');
       });
     } else {
-      socket.emit(eventName, {"BotId": id, "Question": msg}, (data) => {
+      socket.emit(eventName, {"BotId": Botid, "Question": msg}, (data) => {
           generate_message(data.answer, 'user');
       });
     }
@@ -85,12 +86,17 @@ $(function() {
     generate_message(name, 'self');
   });
   
-  $("#chat-circle").click(function() {    
-    if(!greeted){
-      // show greeting message
-      setTimeout(() => generate_message('Hey there!','user'), 1000);
-      setTimeout(() => generate_message('Welcome, Feel free to ask me any question.😁','user'), 2000);
-      greeted = true;
+  $("#chat-circle").click(function() {
+    if(!isGreeted){
+      socket.emit("greetings", {"BotId": Botid}, (data) => {
+          for(let i=0; i < data.len; i++){
+              let msg = data.msgs[i];
+              setTimeout(() => {
+                generate_message(msg.msg, 'user');
+              }, msg.delay);
+          }
+      });
+      isGreeted = true;
     }
     $("#chat-circle").toggle('scale');
     $(".chat-box").toggle('scale');

@@ -52,13 +52,32 @@ def Replier(para, ques):
 
 ################## Sockets ######################
 
+#
+# ** TODO **
+# Load Greeting Message for custom
+# else assign default ones
+# **********
+@socketio.on('greetings')
+def greetings(req):
+    data = {
+        "len": 2,
+        "msgs": [
+            {"msg": "Hey there!", "delay": 1000},
+            {"msg": "Welcome, Feel free to ask me any question.😁", "delay": 2000}
+        ]
+    }
+    return data
+
 @socketio.on('chatbot')
 def chatbot(req):
     db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(req["BotId"]))
     para = db.fetchone()
     if para and (para[1] or req['Previewbot'] is 1):
         ans = Replier(para[0], req['Question'])
-        return {'answer': ans}
+        if '[SEP]' in ans:
+            return {'answer': ans}
+        else:
+            return {'answer': ans}
     elif para and not para[1]:
         return {'answer': "Bot is under maintenance"}
     else:
@@ -87,38 +106,6 @@ def templatebot():
 @app.route('/previewbot/<bot_id>', methods=['GET'])
 def previewbot(bot_id):
     return render_template('preview.html', loadurl='http://{}:{}'.format(serverhost, serverport), botid=bot_id)
-
-################# Old Chatbot Api ###################
-#
-# @app.route('/chat/<bot_id>', methods=['POST'])
-# def chat(bot_id):
-#     if request.get_json()['question']:
-#         db.execute("SELECT paragraph,is_deployed from userpanel_bot where id={}".format(bot_id))
-#         para = db.fetchone()
-#
-#         if para and (para[1] or request.get_json()['previewbot'] is 1):
-#             response = request.get_json()
-#             ans = Replier(para[0], response['question'])
-#             if '[SEP]' in ans:
-#                 j_ans = jsonify({'answer': ans})
-#             else:
-#                 j_ans = jsonify({'answer': ans})
-#             j_ans.headers.add('Access-Control-Allow-Origin', '*')
-#             return j_ans
-#         elif para and not para[1]:
-#             j_ans = jsonify({'answer': "Bot is under maintenance"})
-#             j_ans.headers.add('Access-Control-Allow-Origin', '*')
-#             return j_ans
-#         else:
-#             j_ans = jsonify({'answer': "Bot does not exist"})
-#             j_ans.headers.add('Access-Control-Allow-Origin', '*')
-#             return j_ans
-#
-# @app.route('/api/', methods=['POST'])
-# def answerapi():
-#     req = request.get_json()
-#     ans = Replier(req['paragraph'], req['question'])
-#     return jsonify({'answer': ans})
 
 ################## SERVER RUN ######################
 
