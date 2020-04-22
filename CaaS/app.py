@@ -1,10 +1,10 @@
 import time
 
 import torch
-from flask import Flask, request, render_template, jsonify
+from flask import Flask, render_template, request
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit, rooms, join_room
 from flaskext.mysql import MySQL
-from flask_socketio import SocketIO, emit
 from transformers import *
 
 ################## SERVER SETUP ######################
@@ -25,6 +25,10 @@ mysql = MySQL(app)
 db = mysql.connect().cursor()
 socketio = SocketIO(app)
 
+current_admins = []
+
+def getRoomName(sid, botid):
+    return str(sid) + "-" + str(botid)
 
 ################## CHATBOT ######################
 
@@ -52,7 +56,10 @@ def Replier(para, ques):
 
 ################## Sockets ######################
 
-#
+@socketio.on('adminQues')
+def adminQues(msg):
+    print("SID: {}, Ques: {}".format(request.sid, msg))
+
 # ** TODO **
 # Load Greeting Message for custom
 # else assign default ones
@@ -75,7 +82,9 @@ def chatbot(req):
     if para and (para[1] or req['Previewbot'] is 1):
         ans = Replier(para[0], req['Question'])
         if '[SEP]' in ans:
-            return {'answer': ans}
+            join_room(getRoomName(request.sid, req["BotId"]), sid=request.sid)
+            emit("joinroom", "Sorry I won't understand, We Switching you to Our Admin", room=getRoomName(request.sid, req["BotId"]))
+            return {'answer': "[NIL]"}
         else:
             return {'answer': ans}
     elif para and not para[1]:
@@ -103,7 +112,15 @@ def oldhome():
 def templatebot():
     return render_template('get.js', loadurl='http://{}:{}'.format(serverhost, serverport))
 
-@app.route('/previewbot/<bot_id>', methods=['GET'])
+@app.route('/admintemplate')
+def admintemplate():
+    return render_template('get2.js', loadurl='http://{}:{}'.format(serverhost, serverport))
+
+@app.route('/adminbot/<bot_id>')
+def adminbot(bot_id):
+    return render_template('admin.html', loadurl='http://{}:{}'.format(serverhost, serverport), botid=bot_id)
+
+@app.route('/previewbot/<bot_id>')
 def previewbot(bot_id):
     return render_template('preview.html', loadurl='http://{}:{}'.format(serverhost, serverport), botid=bot_id)
 
