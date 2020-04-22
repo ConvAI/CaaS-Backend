@@ -33,7 +33,7 @@ div.insertAdjacentHTML('beforeend', '<div id="body" style="position: absolute;bo
     '    </div>\n' +
     '    <div class="chat-box">\n' +
     '        <div class="chat-box-header">\n' +
-    '            <h5 class="title">ChatBot</h5>\n' +
+    '            <h5 id="titleid" class="title">AdminBot</h5>\n' +
     '            <span class="chat-box-toggle"><i class="ion-close-round"></i></span>\n' +
     '        </div>\n' +
     '        <div class="chat-box-body">\n' +

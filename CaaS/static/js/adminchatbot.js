@@ -1,11 +1,30 @@
 $(function() {
   let INDEX = 0;
   let isGreeted = false;
-  const URL = document.getElementById('chatbotscript').getAttribute('src').replace("/templatebot", "");
+  let clientConnect = false;
+  let currRoom = "";
+  const URL = document.getElementById('chatbotscript').getAttribute('src').replace("/admintemplate", "");
   const Botid = document.getElementById('chatbotscript').getAttribute('chatbot-id');
   const socket = io(URL);
-  socket.on('connect', () => {});
+
+  socket.on('connect', () => {
+      socket.emit("adminConnect", {"BotId": Botid, "Admin": 1});
+  });
   socket.on('disconnect', () => {socket.open();});
+  socket.on('joinroom', (res) => {
+    clientConnect = true;
+    currRoom = res.room;
+    setTimeout(() => generate_message(res.msg, 'user'), 800);
+    setTimeout(() => addLiveCircle(), 1000);
+  });
+  socket.on('leaveroom', (msg) => {
+    clientConnect = false;
+    setTimeout(() => generate_message(msg, 'user'), 800);
+    setTimeout(() => removeLiveCircle(), 1000);
+  });
+  socket.on('adminQues', (msg) => {
+    generate_message(msg, 'user');
+  });
 
   $("#chat-submit").click(function(e) {
     e.preventDefault();
@@ -14,15 +33,8 @@ $(function() {
       return false;
     }
     generate_message(msg, 'self');
-    let eventName = "chatbot";
-    if(document.getElementById('chatbotscript').hasAttribute('previewbot')){
-      socket.emit(eventName, {"BotId": Botid, "Question": msg, "Previewbot": 1}, (data) => {
-          generate_message(data.answer, 'user');
-      });
-    } else {
-      socket.emit(eventName, {"BotId": Botid, "Question": msg}, (data) => {
-          generate_message(data.answer, 'user');
-      });
+    if(clientConnect && currRoom !== "") {
+        socket.emit("adminAns", {"Ans": msg, "Room": currRoom});
     }
   });
 
@@ -88,7 +100,7 @@ $(function() {
 
   $("#chat-circle").click(function() {
     if(!isGreeted){
-      socket.emit("greetings", {"BotId": Botid}, (data) => {
+      socket.emit("greetingsAdmins", (data) => {
           for(let i=0; i < data.len; i++){
               let msg = data.msgs[i];
               setTimeout(() => {
@@ -106,5 +118,12 @@ $(function() {
     $("#chat-circle").toggle('scale');
     $(".chat-box").toggle('scale');
   });
-  
+
+  function addLiveCircle() {
+    document.getElementById('titleid').textContent += "🟢";
+  }
+
+  function removeLiveCircle() {
+    document.getElementById('titleid').textContent = "AdminBot";
+  }
 });

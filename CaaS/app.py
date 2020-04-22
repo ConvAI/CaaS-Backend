@@ -25,11 +25,6 @@ mysql = MySQL(app)
 db = mysql.connect().cursor()
 socketio = SocketIO(app)
 
-current_admins = []
-
-def getRoomName(sid, botid):
-    return str(sid) + "-" + str(botid)
-
 ################## CHATBOT ######################
 
 def Replier(para, ques):
@@ -54,11 +49,91 @@ def Replier(para, ques):
     print('[=>] Answer: ', ans, " Time:", time_taken)
     return ans
 
-################## Sockets ######################
+################## Admin Manager ######################
+
+current_admins = []
+
+def getRoomName(botid, sid):
+    return str(sid) + "-" + str(botid)
+
+def addAdmin(botid, sid):
+    current_admins.append({
+        "sid": sid,
+        "botid": botid,
+        "available": True
+    })
+
+def isAdmin(sid):
+    for admin in current_admins:
+        if sid == admin["sid"]:
+            return True
+    return False
+
+def availableAdmin(botid):
+    for admin in current_admins:
+        if botid == admin["botid"] and admin["available"]:
+            return admin["sid"]
+    return None
+
+def setAvailability(val, sid):
+    for admin in current_admins:
+        if sid == admin["sid"]:
+            admin["available"] = bool(val)
+            break
+
+def removeAdmin(sid):
+    for admin in current_admins:
+        if sid == admin["sid"]:
+            current_admins.remove(admin)
+            break
+
+def joinQueryRoom(botId, adminSid, clientSid):
+    currRoom = getRoomName(clientSid, botId)
+    # Admin
+    join_room(currRoom, sid=adminSid)
+    emit("joinroom", {"msg": "Hey we got client query, We are Switching you to Client", "room": currRoom},
+         room=currRoom, skip_sid=request.sid)
+    # Client
+    join_room(currRoom, sid=request.sid)
+    emit("joinroom", {"msg": "Sorry, I don't understand, We are Switching you to Our Admin"},
+         room=currRoom, skip_sid=adminSid)
+
+################## Admin Sockets ######################
+
+@socketio.on('adminConnect')
+def adminConnect(req):
+    if req["Admin"] == 1:
+        addAdmin(req["BotId"], request.sid)
+        print('Admin Connected: {}'.format(request.sid))
+
+@socketio.on('disconnect')
+def disconnect():
+    if isAdmin(request.sid):
+        removeAdmin(request.sid)
+        print('Admin Disconnected')
+    else:
+        print('Client Disconnected')
+
+@socketio.on('greetingsAdmins')
+def greetingsAdmins():
+    return {
+        "len": 3,
+        "msgs": [
+            {"msg": "Hey there!", "delay": 1000},
+            {"msg": "Welcome Admin😁, Clients are Waiting for you.", "delay": 1700},
+            {"msg": "We will Connect you to them Soon.", "delay": 2300}
+        ]
+    }
 
 @socketio.on('adminQues')
 def adminQues(msg):
-    print("SID: {}, Ques: {}".format(request.sid, msg))
+    emit("adminQues", msg["Question"], room=getRoomName(request.sid, msg["BotId"]))
+
+@socketio.on('adminAns')
+def adminAns(res):
+    emit("adminAns", res["Ans"], room=res["Room"])
+
+################## Bot Sockets ######################
 
 # ** TODO **
 # Load Greeting Message for custom
@@ -66,14 +141,14 @@ def adminQues(msg):
 # **********
 @socketio.on('greetings')
 def greetings(req):
-    data = {
+    res = {
         "len": 2,
         "msgs": [
             {"msg": "Hey there!", "delay": 1000},
-            {"msg": "Welcome, Feel free to ask me any question.😁", "delay": 2000}
+            {"msg": "Welcome, Feel free to ask me any question.😁", "delay": 1700}
         ]
     }
-    return data
+    return res
 
 @socketio.on('chatbot')
 def chatbot(req):
@@ -82,9 +157,12 @@ def chatbot(req):
     if para and (para[1] or req['Previewbot'] is 1):
         ans = Replier(para[0], req['Question'])
         if '[SEP]' in ans:
-            join_room(getRoomName(request.sid, req["BotId"]), sid=request.sid)
-            emit("joinroom", "Sorry I won't understand, We Switching you to Our Admin", room=getRoomName(request.sid, req["BotId"]))
-            return {'answer': "[NIL]"}
+            adminSid = availableAdmin(req["BotId"])
+            if adminSid is not None:
+                joinQueryRoom(req["BotId"], adminSid, request.sid)
+                return {'answer': "[NIL]"}
+            else:
+                return {'answer': "Sorry, I don't understand"}
         else:
             return {'answer': ans}
     elif para and not para[1]:

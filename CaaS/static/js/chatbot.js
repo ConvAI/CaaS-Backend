@@ -5,17 +5,21 @@ $(function() {
   const URL = document.getElementById('chatbotscript').getAttribute('src').replace("/templatebot", "");
   const Botid = document.getElementById('chatbotscript').getAttribute('chatbot-id');
   const socket = io(URL);
+
   socket.on('connect', () => {});
   socket.on('disconnect', () => {socket.open();});
-  socket.on('joinroom', (msg) => {
+  socket.on('joinroom', (res) => {
     botMode = "adminbot";
-    setTimeout(() => generate_message(msg, 'user'), 800);
+    setTimeout(() => generate_message(res.msg, 'user'), 800);
     setTimeout(() => addLiveCircle(), 1000);
   });
   socket.on('leaveroom', (msg) => {
     botMode = "chatbot";
     setTimeout(() => generate_message(msg, 'user'), 800);
     setTimeout(() => removeLiveCircle(), 1000);
+  });
+  socket.on('adminAns', (msg) => {
+    generate_message(msg, 'user');
   });
 
   $("#chat-submit").click(function(e) {
@@ -41,9 +45,6 @@ $(function() {
         }
     } else if(botMode === "adminbot") {
         socket.emit("adminQues", {"BotId": Botid, "Question": msg});
-        socket.on('adminAns', (msg) => {
-          generate_message(msg, 'user');
-        });
     }
   });
 
@@ -135,5 +136,4 @@ $(function() {
   function removeLiveCircle() {
     document.getElementById('titleid').textContent = "ChatBot";
   }
-  
 });
