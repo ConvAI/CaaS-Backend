@@ -3,7 +3,7 @@ import time
 import torch
 from flask import Flask, render_template, request
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit, rooms, join_room
+from flask_socketio import SocketIO, emit, rooms, join_room, close_room
 from flaskext.mysql import MySQL
 from transformers import *
 
@@ -53,14 +53,15 @@ def Replier(para, ques):
 
 current_admins = []
 
-def getRoomName(botid, sid):
+def getRoomName(sid, botid):
     return str(sid) + "-" + str(botid)
 
-def addAdmin(botid, sid):
+def addAdmin(sid, botid):
     current_admins.append({
         "sid": sid,
         "botid": botid,
-        "available": True
+        "available": True,
+        "room": ""
     })
 
 def isAdmin(sid):
@@ -75,44 +76,100 @@ def availableAdmin(botid):
             return admin["sid"]
     return None
 
-def setAvailability(val, sid):
-    for admin in current_admins:
-        if sid == admin["sid"]:
-            admin["available"] = bool(val)
-            break
-
 def removeAdmin(sid):
     for admin in current_admins:
         if sid == admin["sid"]:
             current_admins.remove(admin)
             break
 
-def joinQueryRoom(botId, adminSid, clientSid):
-    currRoom = getRoomName(clientSid, botId)
-    # Admin
-    join_room(currRoom, sid=adminSid)
-    emit("joinroom", {"msg": "Hey we got client query, We are Switching you to Client", "room": currRoom},
-         room=currRoom, skip_sid=request.sid)
-    # Client
-    join_room(currRoom, sid=request.sid)
-    emit("joinroom", {"msg": "Sorry, I don't understand, We are Switching you to Our Admin"},
-         room=currRoom, skip_sid=adminSid)
+def adminJoinRoom(sid, room):
+    for admin in current_admins:
+        if sid == admin["sid"] and admin["available"]:
+            admin["room"] = room
+            admin["available"] = False
+            break
+
+def adminLeaveRoom(sid):
+    for admin in current_admins:
+        if sid == admin["sid"]:
+            admin["room"] = ""
+            admin["available"] = True
+            break
+
+def getAdminRoom(sid):
+    for admin in current_admins:
+        if sid == admin["sid"]:
+            return admin["room"]
+    return ""
+
+def getRoomAdmin(room):
+    for admin in current_admins:
+        if room == admin["room"]:
+            return admin["sid"]
+    return None
+
+def joinQueryRoom(clientSid, botId):
+    adminSid = availableAdmin(botId)
+    if adminSid is not None:
+        # New Room
+        new_Room = getRoomName(clientSid, botId)
+        # Admin
+        join_room(new_Room, sid=adminSid)
+        adminJoinRoom(adminSid, new_Room)
+        emit("joinroom", {"msg": "Hey we got client query, We are Switching you to Client", "room": new_Room},
+             room=new_Room, skip_sid=request.sid)
+        # Client
+        join_room(new_Room, sid=request.sid)
+        emit("joinroom", {"msg": "Sorry, I don't understand, We are Switching you to Our Admin"},
+             room=new_Room, skip_sid=adminSid)
+        return True
+    else:
+        return False
+
+def getClientRoom(clientSid):
+    rlist = rooms(sid=clientSid)
+    if len(rlist) > 1:
+        return rlist[1]
+    return None
+
+def getRoomClient(room):
+    return room.split("-")[0]
+
+def whenAdminDisconnect(adminSid):
+    adminRoom = getAdminRoom(adminSid)
+    if adminRoom is not "":
+        roomClientSid = getRoomClient(adminRoom)
+        emit("leaveroom", "Client Got Disconnected", room=adminRoom, skip_sid=roomClientSid)
+        emit("leaveroom", "You Got Disconnected From Admin", room=adminRoom, skip_sid=adminSid)
+        close_room(adminRoom)
+
+def whenClientDisconnect(clientSid):
+    clientRoom = getClientRoom(clientSid)
+    if clientRoom is not None:
+        roomAdminSid = getRoomAdmin(clientRoom)
+        if roomAdminSid is not None:
+            emit("leaveroom", "Client Got Disconnected", room=clientRoom, skip_sid=clientSid)
+            emit("leaveroom", "You Got Disconnected From Admin", room=clientRoom, skip_sid=roomAdminSid)
+            adminLeaveRoom(roomAdminSid)
+            close_room(clientRoom)
 
 ################## Admin Sockets ######################
 
 @socketio.on('adminConnect')
 def adminConnect(req):
     if req["Admin"] == 1:
-        addAdmin(req["BotId"], request.sid)
-        print('Admin Connected: {}'.format(request.sid))
+        addAdmin(request.sid, req["BotId"])
+        print('[=>] Admin Connected: {}'.format(request.sid))
 
 @socketio.on('disconnect')
 def disconnect():
     if isAdmin(request.sid):
+        whenAdminDisconnect(request.sid)
         removeAdmin(request.sid)
-        print('Admin Disconnected')
+        print('[=>] Admin Disconnected: {}'.format(request.sid))
     else:
-        print('Client Disconnected')
+        whenClientDisconnect(request.sid)
+        print('[=>] Client Disconnected: {}'.format(request.sid))
 
 @socketio.on('greetingsAdmins')
 def greetingsAdmins():
@@ -133,7 +190,7 @@ def adminQues(msg):
 def adminAns(res):
     emit("adminAns", res["Ans"], room=res["Room"])
 
-################## Bot Sockets ######################
+#################### Bot Sockets ########################
 
 # ** TODO **
 # Load Greeting Message for custom
@@ -157,9 +214,7 @@ def chatbot(req):
     if para and (para[1] or req['Previewbot'] is 1):
         ans = Replier(para[0], req['Question'])
         if '[SEP]' in ans:
-            adminSid = availableAdmin(req["BotId"])
-            if adminSid is not None:
-                joinQueryRoom(req["BotId"], adminSid, request.sid)
+            if joinQueryRoom(request.sid, req["BotId"]):
                 return {'answer': "[NIL]"}
             else:
                 return {'answer': "Sorry, I don't understand"}
