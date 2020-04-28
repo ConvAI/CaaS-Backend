@@ -23,7 +23,7 @@ serverport = 8082
 CORS(app)
 mysql = MySQL(app)
 db = mysql.connect().cursor()
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 ################## CHATBOT ######################
 
