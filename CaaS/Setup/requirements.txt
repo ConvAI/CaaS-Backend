@@ -11,7 +11,7 @@ Flask-MySQL==1.5.1
 Flask-SocketIO==4.3.0
 idna==2.9
 itsdangerous==1.1.0
-Jinja2==2.11.2
+Jinja2==2.11.3
 jmespath==0.9.5
 joblib==0.14.1
 MarkupSafe==1.1.1
