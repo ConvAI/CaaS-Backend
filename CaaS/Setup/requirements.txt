@@ -15,7 +15,7 @@ Jinja2==2.11.3
 jmespath==0.9.5
 joblib==0.14.1
 MarkupSafe==1.1.1
-numpy==1.21.0
+numpy==1.22.0
 PyMySQL==0.9.3
 python-dateutil==2.8.1
 python-engineio==3.12.1
